@@ -1,7 +1,5 @@
 from json import dumps as json_encode
 
-from django.urls import reverse
-
 from ..libs.factories import fake
 from ..libs.tests import CustomTestCase
 from .models import Account, Token
@@ -12,7 +10,7 @@ class AccountTests(CustomTestCase):
         # Posting to the account list should create an account, with a new token.
         name = fake.company()
         data = {'name': name}
-        response = self.client.post(reverse('accounts'), data=data)
+        response = self.client.post('/accounts/', data=data)
         result = self.assertJsonResponse(response)
         
         account = self.assertCreated(Account, result.get('account', {}).get('id'), name=name)
@@ -26,6 +24,6 @@ class AccountTests(CustomTestCase):
         # Posting as JSON should also work.
         name = fake.company()
         data = json_encode({'name': name})
-        response = self.client.post(reverse('accounts'), data, content_type='application/json')
+        response = self.client.post('/accounts/', data, content_type='application/json')
         result = self.assertJsonResponse(response)
         account = self.assertCreated(Account, result.get('account', {}).get('id'), name=name)

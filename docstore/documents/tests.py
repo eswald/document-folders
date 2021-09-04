@@ -1,7 +1,7 @@
-from uuid import uuid4
 from json import dumps as json_encode
+from random import choice
+from uuid import uuid4
 
-from django.urls import reverse
 from django.utils import timezone
 from factory.faker import Faker as FakeAttribute
 
@@ -19,7 +19,7 @@ class DocumentCreationTests(CustomTestCase):
             'name': fake.bs(),
             'content': "\n".join(fake.paragraphs()),
         }
-        response = self.call_api('POST', 'documents', data, token=token.uuid)
+        response = self.call_api('POST', '/documents/', data, token=token.uuid)
         result = self.assertJsonResponse(response)
         
         account_code = result.get('document', {}).get('id')
@@ -45,7 +45,7 @@ class DocumentCreationTests(CustomTestCase):
         }
         
         with self.subTest("Without an authorization token"):
-            path = reverse('documents')
+            path = '/documents/'
             payload = json_encode(data)
             response = self.client.post(path, payload, content_type='application/json')
             result = self.assertJsonResponse(response, status_code=401)
@@ -53,13 +53,13 @@ class DocumentCreationTests(CustomTestCase):
             self.assertEqual(Document.objects.all().count(), documents)
         
         with self.subTest("With an incorrect authorization token"):
-            response = self.call_api('POST', 'documents', data, token=uuid4())
+            response = self.call_api('POST', '/documents/', data, token=uuid4())
             result = self.assertJsonResponse(response, status_code=401)
             self.assertEqual(result, None)
             self.assertEqual(Document.objects.all().count(), documents)
         
         with self.subTest("With an invalid authorization token"):
-            response = self.call_api('POST', 'documents', data, token=fake.word())
+            response = self.call_api('POST', '/documents/', data, token=fake.word())
             result = self.assertJsonResponse(response, status_code=401)
             self.assertEqual(result, None)
             self.assertEqual(Document.objects.all().count(), documents)
@@ -69,7 +69,7 @@ class DocumentListTests(CustomTestCase):
     def test_list(self):
         token = TokenFactory()
         documents = ListFactory(DocumentFactory, account=token.account)
-        response = self.call_api('GET', 'documents', token=token.uuid)
+        response = self.call_api('GET', '/documents/', token=token.uuid)
         result = self.assertJsonResponse(response)
         
         expected = [{
@@ -90,14 +90,14 @@ class DocumentListTests(CustomTestCase):
         token = TokenFactory()
         documents = ListFactory(DocumentFactory, account=token.account)
         with self.assertNumQueries(2):
-            response = self.call_api('GET', 'documents', token=token.uuid)
+            response = self.call_api('GET', '/documents/', token=token.uuid)
     
     def test_foreign(self):
         # The returned documents should not include documents of other accounts.
         token = TokenFactory()
         documents = ListFactory(DocumentFactory, account=token.account)
         foreign = ListFactory(DocumentFactory)
-        response = self.call_api('GET', 'documents', token=token.uuid)
+        response = self.call_api('GET', '/documents/', token=token.uuid)
         result = self.assertJsonResponse(response)
         collected = [doc['id'] for doc in result['documents']]
         self.assertCountEqual(collected, [doc.code for doc in documents])
@@ -108,7 +108,38 @@ class DocumentListTests(CustomTestCase):
         documents = ListFactory(DocumentFactory, account=token.account)
         recent = FakeAttribute('date_time_this_month', before_now=True, tzinfo=timezone.utc)
         foreign = ListFactory(DocumentFactory, account=token.account, deleted=recent)
-        response = self.call_api('GET', 'documents', token=token.uuid)
+        response = self.call_api('GET', '/documents/', token=token.uuid)
         result = self.assertJsonResponse(response)
         collected = [doc['id'] for doc in result['documents']]
         self.assertCountEqual(collected, [doc.code for doc in documents])
+
+
+class DocumentReadTests(CustomTestCase):
+    def test_read(self):
+        token = TokenFactory()
+        documents = ListFactory(DocumentFactory, account=token.account)
+        document = choice(documents)
+        response = self.call_api('GET', f'/documents/{document.code}/', token=token.uuid)
+        result = self.assertJsonResponse(response)
+        
+        self.assertEqual(result, {'document': {
+            'id': document.code,
+            'name': document.name,
+            'content': document.content,
+            'account': token.account.code,
+            'created': Timestamp(document.created),
+            'modified': Timestamp(document.modified),
+            'deleted': None,
+        }})
+    
+    def test_foreign(self):
+        token = TokenFactory()
+        document = DocumentFactory()
+        response = self.call_api('GET', f'/documents/{document.code}/', token=token.uuid)
+        result = self.assertJsonResponse(response, status_code=403)
+    
+    def test_invalid(self):
+        token = TokenFactory()
+        document = DocumentFactory()
+        response = self.call_api('GET', f'/documents/d-{fake.word()}/', token=token.uuid)
+        result = self.assertJsonResponse(response, status_code=403)

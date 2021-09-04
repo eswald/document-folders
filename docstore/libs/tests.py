@@ -3,7 +3,6 @@ from json import loads as json_decode, dumps as json_encode
 
 from dateutil.parser import parse as parse_datetime
 from django.test import TestCase
-from django.urls import reverse
 from django.utils import timezone
 
 
@@ -84,10 +83,10 @@ class CustomTestCase(TestCase):
             self.assertEqual(getattr(item, field), value)
         return item
     
-    def call_api(self, method, view_name, data=None, token=None):
+    def call_api(self, method, path, data=None, token=None):
         return self.client.generic(
             method = method,
-            path = reverse(view_name),
+            path = path,
             data = json_encode(data),
             content_type = 'application/json',
             HTTP_AUTHORIZATION = f"Bearer {token}",

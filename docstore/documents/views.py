@@ -1,3 +1,5 @@
+from django.core.exceptions import PermissionDenied
+
 from ..libs.views import ApiResponse, ApiView
 
 from .forms import DocumentCreationForm
@@ -22,6 +24,17 @@ class DocumentList(ApiView):
             )
         
         document = form.save(account=request.account)
+        return {
+            'document': serialize_document(document),
+        }
+
+
+class DocumentView(ApiView):
+    def get(self, request, code):
+        try:
+            document = Document.objects.get(code=code, account=request.account)
+        except Document.DoesNotExist:
+            raise PermissionDenied
         return {
             'document': serialize_document(document),
         }
