@@ -57,3 +57,14 @@ class DocumentView(ApiView):
         return {
             'document': serialize_document(revised),
         }
+    
+    def delete(self, request, code):
+        try:
+            document = Document.objects.get(code=code, account=request.account)
+        except Document.DoesNotExist:
+            raise PermissionDenied
+        
+        document.delete()
+        return {
+            'document': serialize_document(document),
+        }

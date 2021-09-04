@@ -204,3 +204,47 @@ class DocumentUpdateTests(CustomTestCase):
         response = self.call_api('PUT', f'/documents/d-{fake.word()}/', data, token=token.uuid)
         result = self.assertJsonResponse(response, status_code=403)
         self.assertIsNone(result)
+
+
+class DocumentDeleteTests(CustomTestCase):
+    def test_delete(self):
+        token = TokenFactory()
+        documents = ListFactory(DocumentFactory, account=token.account)
+        document = choice(documents)
+        response = self.call_api('DELETE', f'/documents/{document.code}/', token=token.uuid)
+        result = self.assertJsonResponse(response)
+        
+        revised = Document.all_objects.get(id=document.id)
+        self.assertTimestamped(revised.deleted)
+        
+        self.assertEqual(result, {'document': {
+            'id': document.code,
+            'name': document.name,
+            'content': document.content,
+            'account': token.account.code,
+            'created': Timestamp(document.created),
+            'modified': Timestamp(document.modified),
+            'deleted': Timestamp(revised.deleted),
+        }})
+        
+        for doc in documents:
+            if doc.id != document.id:
+                revised = Document.all_objects.get(id=doc.id)
+                self.assertIsNone(revised.deleted)
+    
+    def test_foreign(self):
+        token = TokenFactory()
+        document = DocumentFactory()
+        response = self.call_api('DELETE', f'/documents/{document.code}/', token=token.uuid)
+        result = self.assertJsonResponse(response, status_code=403)
+        self.assertIsNone(result)
+        
+        revised = Document.all_objects.get(id=document.id)
+        self.assertIsNone(revised.deleted)
+    
+    def test_invalid(self):
+        token = TokenFactory()
+        document = DocumentFactory()
+        response = self.call_api('DELETE', f'/documents/d-{fake.word()}/', token=token.uuid)
+        result = self.assertJsonResponse(response, status_code=403)
+        self.assertIsNone(result)
