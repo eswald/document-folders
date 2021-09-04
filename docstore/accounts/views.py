@@ -6,6 +6,8 @@ from .serializers import serialize_account, serialize_token
 
 
 class AccountList(ApiView):
+    auth_required = False
+    
     def post(self, request):
         form = AccountRegistrationForm(request.POST)
         if not form.is_valid():

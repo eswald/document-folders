@@ -7,7 +7,8 @@ from .documents import views as documents
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^account/', accounts.AccountList, name='accounts'),
+    url(r'^accounts/', accounts.AccountList, name='accounts'),
+    url(r'^documents/', documents.DocumentList, name='documents'),
     url(r'^favicon.*$', RedirectView.as_view(url='/static/logo.png', permanent=True), name='favicon'),
     url(r'^$', RedirectView.as_view(url='https://github.com/eswald/docfiles/', permanent=True), name='main'),
 ]

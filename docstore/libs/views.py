@@ -1,3 +1,4 @@
+from django.core.exceptions import ValidationError
 from django.http.response import HttpResponse, HttpResponseNotAllowed, JsonResponse
 
 
@@ -13,7 +14,7 @@ class SimpleView(metaclass=ViewMeta):
     # Simpler version of Django's generic View.
 
     http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', 'trace']
-    
+
     def __init__(self):
         from logging import getLogger
         self.log = getLogger('%s.%s' % (self.__class__.__module__, self.__class__.__name__))
@@ -66,7 +67,28 @@ class ApiResponse(JsonResponse):
 
 
 class ApiView(SimpleView):
+    auth_required = True
+    
     def __call__(self, request, *args, **kwargs):
+        # Check for an authorization token.
+        if 'HTTP_AUTHORIZATION' in request.META:
+            from ..accounts.models import Token
+            auth = request.META['HTTP_AUTHORIZATION']
+            prefix = "Bearer "
+            if not auth.startswith(prefix):
+                # Sometime, other types of authorization could be acceptable, or even preferable.
+                return ApiResponse(status=401, errors='Unauthorized')
+            try:
+                token = Token.objects.select_related('account').get(uuid=auth[len(prefix):])
+            except (Token.DoesNotExist, ValidationError):
+                return ApiResponse(status=401, errors='Unauthorized')
+            request.account = token.account
+            request.csrf_processing_done = True
+        elif self.auth_required:
+            return ApiResponse(status=401, errors='Unauthorized')
+        else:
+            request.account = None
+
         # Translate JSON data in the request body.
         if request.META.get('CONTENT_TYPE', '').startswith('application/json'):
             from decimal import Decimal
