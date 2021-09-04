@@ -38,3 +38,22 @@ class DocumentView(ApiView):
         return {
             'document': serialize_document(document),
         }
+    
+    def put(self, request, code):
+        try:
+            document = Document.objects.get(code=code, account=request.account)
+        except Document.DoesNotExist:
+            raise PermissionDenied
+        
+        form = DocumentCreationForm(request.POST, instance=document)
+        if not form.is_valid():
+            return ApiResponse(
+                status = 400,
+                message = 'Invalid data',
+                errors = form.errors,
+            )
+        
+        revised = form.save()
+        return {
+            'document': serialize_document(revised),
+        }

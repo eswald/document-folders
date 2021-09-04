@@ -137,9 +137,70 @@ class DocumentReadTests(CustomTestCase):
         document = DocumentFactory()
         response = self.call_api('GET', f'/documents/{document.code}/', token=token.uuid)
         result = self.assertJsonResponse(response, status_code=403)
+        self.assertIsNone(result)
     
     def test_invalid(self):
         token = TokenFactory()
         document = DocumentFactory()
         response = self.call_api('GET', f'/documents/d-{fake.word()}/', token=token.uuid)
         result = self.assertJsonResponse(response, status_code=403)
+        self.assertIsNone(result)
+
+
+class DocumentUpdateTests(CustomTestCase):
+    def test_update(self):
+        token = TokenFactory()
+        documents = ListFactory(DocumentFactory, account=token.account)
+        document = choice(documents)
+        data = {
+            'name': fake.catch_phrase(),
+            'content': "\n".join(fake.paragraphs()),
+        }
+        
+        response = self.call_api('PUT', f'/documents/{document.code}/', data, token=token.uuid)
+        result = self.assertJsonResponse(response)
+        
+        revised = Document.objects.get(id=document.id)
+        self.assertTimestamped(revised.modified)
+        self.assertEqual(revised.created, document.created)
+        self.assertEqual(revised.name, data['name'])
+        self.assertEqual(revised.content, data['content'])
+        
+        self.assertEqual(result, {'document': {
+            'id': document.code,
+            'name': data['name'],
+            'content': data['content'],
+            'account': token.account.code,
+            'created': Timestamp(document.created),
+            'modified': Timestamp(revised.modified),
+            'deleted': None,
+        }})
+        
+        self.assertEqual(Document.objects.all().count(), len(documents))
+    
+    def test_foreign(self):
+        token = TokenFactory()
+        document = DocumentFactory()
+        data = {
+            'name': fake.catch_phrase(),
+            'content': "\n".join(fake.paragraphs()),
+        }
+        response = self.call_api('PUT', f'/documents/{document.code}/', data, token=token.uuid)
+        result = self.assertJsonResponse(response, status_code=403)
+        self.assertIsNone(result)
+        
+        revised = Document.objects.get(id=document.id)
+        self.assertEqual(revised.name, document.name)
+        self.assertEqual(revised.content, document.content)
+        self.assertEqual(revised.modified, document.modified)
+    
+    def test_invalid(self):
+        token = TokenFactory()
+        document = DocumentFactory()
+        data = {
+            'name': fake.catch_phrase(),
+            'content': "\n".join(fake.paragraphs()),
+        }
+        response = self.call_api('PUT', f'/documents/d-{fake.word()}/', data, token=token.uuid)
+        result = self.assertJsonResponse(response, status_code=403)
+        self.assertIsNone(result)
