@@ -63,7 +63,9 @@ ptyprocess==0.7.0
 pygments==2.10.0
     # via ipython
 python-dateutil==2.8.2
-    # via faker
+    # via
+    #   -r requirements.in
+    #   faker
 pytz==2021.1
     # via django
 six==1.16.0

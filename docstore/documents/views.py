@@ -1,10 +1,17 @@
 from ..libs.views import ApiResponse, ApiView
 
 from .forms import DocumentCreationForm
+from .models import Document
 from .serializers import serialize_document
 
 
 class DocumentList(ApiView):
+    def get(self, request):
+        documents = Document.objects.filter(account=request.account)
+        return {
+            'documents': [serialize_document(document) for document in documents],
+        }
+    
     def post(self, request):
         form = DocumentCreationForm(request.POST)
         if not form.is_valid():
