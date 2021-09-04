@@ -1,0 +1,21 @@
+#!/bin/sh
+# Runs the steps that would normally be run in the build step by Heroku.
+
+set -ex
+
+# Python virtual environment
+python3 -m venv python_modules
+. python_modules/bin/activate
+python --version
+
+# Install python dependencies
+pip --version
+pip install -U pip
+pip --version
+pip install -r requirements.txt
+
+# Django static asset collection
+python manage.py collectstatic --noinput
+
+# Custom compilation steps
+bin/post_compile

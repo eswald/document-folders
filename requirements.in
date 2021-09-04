@@ -1,0 +1,12 @@
+Django
+django-environ
+django-extensions
+factory_boy
+faker
+honcho
+ipython
+mock
+pip-tools
+psycopg2-binary
+waitress
+whitenoise[brotli]>=4.0

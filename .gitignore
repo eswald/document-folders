@@ -1,0 +1,5 @@
+*.env
+*.sqlite*
+/static/
+notes/
+python_modules

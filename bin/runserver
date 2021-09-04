@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eux
+
+if [ -x bin/start-pgbouncer-stunnel ]
+then
+  wrapper=bin/start-pgbouncer-stunnel
+else
+  wrapper=
+fi
+
+exec $wrapper waitress-serve --port=$PORT docstore.wsgi:application

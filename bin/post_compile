@@ -1,0 +1,12 @@
+#!/bin/sh
+# Run commands after compiling a slug.
+# This is useful for things that need to be run every time the code changes,
+# but shouldn't be run on multiple processes in parallel.
+
+set -ex
+
+# Create an environment file if it doesn't already exist.
+touch .env
+
+# Run Django database migrations
+python manage.py migrate --noinput
